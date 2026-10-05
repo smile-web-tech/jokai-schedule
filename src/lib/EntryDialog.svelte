@@ -9,6 +9,7 @@
 
 <script>
 	import { longDate } from './dates.js';
+	import { ms } from './motion.js';
 
 	/** @type {{ target: Target | null, onsave: (change: Change) => void, onclose: () => void }} */
 	let { target, onsave, onclose } = $props();
@@ -16,6 +17,7 @@
 	/** @type {HTMLDialogElement} */
 	let dialog;
 	let note = $state('');
+	let closing = $state(false);
 
 	$effect(() => {
 		if (!target) return;
@@ -27,11 +29,30 @@
 	function save(status) {
 		if (!target) return;
 		onsave({ activity: target.activity, member: target.member, date: target.date, status, note: note.trim() });
-		dialog.close();
+		close();
+	}
+
+	/** Plays the closing animation, then closes for real. */
+	function close() {
+		if (!dialog.open || closing) return;
+		closing = true;
+		setTimeout(() => {
+			closing = false;
+			dialog.close();
+		}, ms(180));
 	}
 </script>
 
-<dialog bind:this={dialog} {onclose} onclick={(e) => e.target === dialog && dialog.close()}>
+<dialog
+	bind:this={dialog}
+	class:closing
+	{onclose}
+	oncancel={(e) => {
+		e.preventDefault();
+		close();
+	}}
+	onclick={(e) => e.target === dialog && close()}
+>
 	{#if target}
 		{@const status = target.entry?.status ?? null}
 		<div class="sheet">
@@ -43,7 +64,7 @@
 						{target.member.name} · {longDate(target.date)}
 					</p>
 				</div>
-				<button class="icon" onclick={() => dialog.close()} aria-label="Close">✕</button>
+				<button class="icon" onclick={close} aria-label="Close">✕</button>
 			</header>
 
 			{#if target.state === 'auto'}
@@ -79,6 +100,60 @@
 
 	dialog::backdrop {
 		background: rgb(0 0 0 / 0.45);
+	}
+
+	dialog[open] {
+		animation: sheet-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+	}
+
+	dialog[open]::backdrop {
+		animation: fade-in 0.25s ease-out;
+	}
+
+	dialog.closing {
+		animation: sheet-out 0.18s ease-in forwards;
+	}
+
+	dialog.closing::backdrop {
+		animation: fade-out 0.18s ease-in forwards;
+	}
+
+	@keyframes sheet-in {
+		from {
+			transform: translateY(100%);
+		}
+	}
+
+	@keyframes sheet-out {
+		to {
+			transform: translateY(100%);
+		}
+	}
+
+	@keyframes pop-in {
+		from {
+			opacity: 0;
+			transform: translateY(10px) scale(0.96);
+		}
+	}
+
+	@keyframes pop-out {
+		to {
+			opacity: 0;
+			transform: translateY(10px) scale(0.96);
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes fade-out {
+		to {
+			opacity: 0;
+		}
 	}
 
 	.sheet {
@@ -163,6 +238,14 @@
 		dialog {
 			width: 420px;
 			margin: auto;
+		}
+
+		dialog[open] {
+			animation-name: pop-in;
+		}
+
+		dialog.closing {
+			animation-name: pop-out;
 		}
 
 		.sheet {

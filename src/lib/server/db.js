@@ -44,8 +44,12 @@ export async function db() {
 		if (!url) error(500, 'DATABASE_URL is not set');
 		// prepare: false keeps it compatible with pooled (pgbouncer) connection strings
 		sql = postgres(url, { prepare: false, max: 5, idle_timeout: 20, onnotice: () => {} });
-		ready = sql.unsafe(SCHEMA).simple();
 	}
+	// Retried on the next request if it fails (e.g. while the database is waking up)
+	ready ??= sql.unsafe(SCHEMA).simple().catch((e) => {
+		ready = undefined;
+		throw e;
+	});
 	await ready;
 	return sql;
 }

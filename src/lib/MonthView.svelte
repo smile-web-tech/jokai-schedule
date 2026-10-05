@@ -4,26 +4,23 @@
 
 	/**
 	 * @type {{
-	 *   data: { members: import('./schedule.js').Member[], activities: import('./schedule.js').Activity[], days: string[], date: string, today: string },
-	 *   entries: import('./schedule.js').Entries,
-	 *   who: number
+	 *   members: import('./schedule.js').Member[], activities: import('./schedule.js').Activity[],
+	 *   days: string[], month: string, today: string, entries: import('./schedule.js').Entries, who: number
 	 * }}
 	 */
-	let { data, entries, who } = $props();
-
-	const month = $derived(data.date.slice(0, 7));
+	let { members, activities, days, month, today, entries, who } = $props();
 
 	// One dot per task and day; rotation is worked out once per week
 	const dots = $derived.by(() => {
 		/** @type {Record<string, string[]>} */
 		const out = {};
-		for (let w = 0; w < data.days.length; w += 7) {
-			const week = data.days.slice(w, w + 7);
-			for (const a of data.activities) {
-				const rows = weekRows(a, data.members, week, entries).filter((r) => !who || r.member.id === who);
+		for (let w = 0; w < days.length; w += 7) {
+			const week = days.slice(w, w + 7);
+			for (const a of activities) {
+				const rows = weekRows(a, members, week, entries).filter((r) => !who || r.member.id === who);
 				for (const d of week) {
 					for (const { member, duty } of rows) {
-						const state = cellState(a, member, d, entries[key(d, a.id, member.id)], duty, data.today);
+						const state = cellState(a, member, d, entries[key(d, a.id, member.id)], duty, today);
 						const dot =
 							state === 'done' ? 'done'
 							: state === 'missed' || state === 'auto' ? 'missed'
@@ -43,8 +40,8 @@
 	{#each DAY_NAMES as name (name)}
 		<div class="wd">{name}</div>
 	{/each}
-	{#each data.days as d (d)}
-		<a href="?view=week&date={d}" class="day" class:out={!d.startsWith(month)} class:today={d === data.today}>
+	{#each days as d (d)}
+		<a href="?view=week&date={d}" class="day" class:out={!d.startsWith(month)} class:today={d === today}>
 			<span class="num">{dayNumber(d)}</span>
 			<span class="dots">
 				{#each dots[d] ?? [] as dot, i (i)}<i class={dot}></i>{/each}
@@ -78,6 +75,9 @@
 	}
 
 	.day {
+		transition:
+			background-color 0.15s,
+			transform 0.12s;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -89,6 +89,10 @@
 
 	.day:hover {
 		background: var(--accent-soft);
+	}
+
+	.day:active {
+		transform: scale(0.94);
 	}
 
 	.day.out {
@@ -123,6 +127,7 @@
 	}
 
 	i {
+		transition: background-color 0.2s;
 		display: inline-block;
 		width: 7px;
 		height: 7px;

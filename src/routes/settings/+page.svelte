@@ -1,7 +1,10 @@
 <script>
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
 	import { invalidateAll } from '$app/navigation';
 	import { send } from '$lib/api.js';
 	import { DAY_NAMES, addDays, today } from '$lib/dates.js';
+	import { ms } from '$lib/motion.js';
 	import { onDuty } from '$lib/schedule.js';
 
 	let { data } = $props();
@@ -61,6 +64,11 @@
 
 	/** @param {{ name: string }[]} list */
 	const names = (list) => list.map((m) => m.name).join(' & ');
+
+	const people = $derived(data.members.length);
+
+	/** "N people per turn" choices for an activity. @param {{ group_size: number }} a */
+	const sizes = (a) => Array.from({ length: Math.max(people - 1, a.group_size) }, (_, k) => k + 1);
 </script>
 
 <header class="bar">
@@ -72,7 +80,7 @@
 	<h2>Flatmates</h2>
 	<div class="card">
 		{#each data.members as m, i (m.id)}
-			<div class="row">
+			<div class="row" animate:flip={{ duration: ms(250) }} transition:slide={{ duration: ms(200) }}>
 				<input type="color" value={m.color} aria-label="Color for {m.name}"
 					onchange={(e) => patch('members', m, { color: e.currentTarget.value })} />
 				<input value={m.name} maxlength="30" aria-label="Name" onchange={(e) => rename('members', m, e)} />
@@ -97,9 +105,7 @@
 <section>
 	<h2>Chores</h2>
 	{#each data.activities as a, i (a.id)}
-		{@const people = data.members.length}
-		{@const sizes = Array.from({ length: Math.max(people - 1, a.group_size) }, (_, k) => k + 1)}
-		<div class="card chore">
+		<div class="card chore" animate:flip={{ duration: ms(300) }} transition:slide={{ duration: ms(220) }}>
 			<div class="row">
 				<input value={a.name} maxlength="40" aria-label="Chore name" onchange={(e) => rename('activities', a, e)} />
 				<button class="icon" aria-label="Move up" disabled={busy || i === 0}
@@ -121,7 +127,7 @@
 			</div>
 
 			{#if a.schedule === 'days'}
-				<div class="days">
+				<div class="days" transition:slide={{ duration: ms(180) }}>
 					{#each DAY_NAMES as name, d (name)}
 						<button class="chip" class:on={a.days & (1 << d)} aria-pressed={(a.days & (1 << d)) !== 0}
 							disabled={busy} onclick={() => patch('activities', a, { days: a.days ^ (1 << d) })}>{name}</button>
@@ -137,14 +143,14 @@
 				<select value={a.group_size} disabled={busy}
 					onchange={(e) => patch('activities', a, { group_size: Number(e.currentTarget.value) })}>
 					<option value={0}>Everyone</option>
-					{#each sizes as k (k)}
+					{#each sizes(a) as k (k)}
 						<option value={k}>{k} {k === 1 ? 'person' : 'people'} per turn</option>
 					{/each}
 				</select>
 			</div>
 
 			{#if a.group_size > 0 && a.group_size < people}
-				<div class="field">
+				<div class="field" transition:slide={{ duration: ms(180) }}>
 					<span>Turn</span>
 					<select value={a.rotate_weeks} disabled={busy}
 						onchange={(e) => patch('activities', a, { rotate_weeks: Number(e.currentTarget.value) })}>
@@ -153,7 +159,7 @@
 						{/each}
 					</select>
 				</div>
-				<div class="turns">
+				<div class="turns" transition:slide={{ duration: ms(180) }}>
 					<p>
 						This week: <b>{names(onDuty(a, data.members, data.today))}</b><br />
 						<span class="muted">Next week: {names(onDuty(a, data.members, addDays(data.today, 7)))}</span>

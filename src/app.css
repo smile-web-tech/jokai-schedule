@@ -85,6 +85,17 @@ button,
 	background: var(--surface);
 	cursor: pointer;
 	white-space: nowrap;
+	transition:
+		background-color 0.15s,
+		border-color 0.15s,
+		color 0.15s,
+		opacity 0.15s,
+		transform 0.12s;
+}
+
+button:not(:disabled):active,
+.btn:active {
+	transform: scale(0.95);
 }
 
 button:disabled {
@@ -191,4 +202,15 @@ a:focus-visible {
 
 .empty p {
 	margin: 0 0 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after,
+	::backdrop {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }

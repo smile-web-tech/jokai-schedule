@@ -4,13 +4,12 @@
 
 	/**
 	 * @type {{
-	 *   data: { members: import('./schedule.js').Member[], activities: import('./schedule.js').Activity[], days: string[], today: string },
-	 *   entries: import('./schedule.js').Entries,
-	 *   who: number,
-	 *   onpick: (target: import('./EntryDialog.svelte').Target) => void
+	 *   members: import('./schedule.js').Member[], activities: import('./schedule.js').Activity[],
+	 *   days: string[], today: string, entries: import('./schedule.js').Entries, who: number,
+	 *   flash: string, onpick: (target: import('./EntryDialog.svelte').Target) => void
 	 * }}
 	 */
-	let { data, entries, who, onpick } = $props();
+	let { members, activities, days, today, entries, who, flash, onpick } = $props();
 
 	/** @type {Record<string, string>} */
 	const SYMBOL = { done: '✓', missed: '✗', auto: '✗' };
@@ -24,10 +23,10 @@
 	};
 
 	const groups = $derived(
-		data.activities
+		activities
 			.map((activity) => ({
 				activity,
-				rows: weekRows(activity, data.members, data.days, entries).filter(
+				rows: weekRows(activity, members, days, entries).filter(
 					(r) => !who || r.member.id === who
 				)
 			}))
@@ -41,8 +40,8 @@
 			<thead>
 				<tr>
 					<th class="name"></th>
-					{#each data.days as d, i (d)}
-						<th class:today={d === data.today}>
+					{#each days as d, i (d)}
+						<th class:today={d === today}>
 							<span>{DAY_NAMES[i]}</span>
 							<b>{dayNumber(d)}</b>
 						</th>
@@ -54,19 +53,21 @@
 					<tr class="activity">
 						<th colspan="8">
 							{activity.name}
-							<small>{scheduleLabel(activity)} · {rotationLabel(activity, data.members.length)}</small>
+							<small>{scheduleLabel(activity)} · {rotationLabel(activity, members.length)}</small>
 						</th>
 					</tr>
 					{#each rows as { member, duty } (member.id)}
 						<tr>
 							<th class="name"><i class="dot" style:background={member.color}></i>{member.name}</th>
-							{#each data.days as d (d)}
-								{@const entry = entries[key(d, activity.id, member.id)]}
-								{@const state = cellState(activity, member, d, entry, duty, data.today)}
-								<td class:today={d === data.today}>
+							{#each days as d (d)}
+								{@const k = key(d, activity.id, member.id)}
+								{@const entry = entries[k]}
+								{@const state = cellState(activity, member, d, entry, duty, today)}
+								<td class:today={d === today}>
 									{#if state}
 										<button
 											class="cell {state}"
+											class:pop={flash === k}
 											aria-label="{member.name}, {activity.name}, {d}: {LABEL[state]}"
 											onclick={() => onpick({ activity, member, date: d, entry, state })}
 										>
@@ -97,6 +98,7 @@
 <style>
 	.wrap {
 		padding: 4px 4px 8px;
+		animation: appear 0.25s ease-out;
 		overflow-x: auto;
 	}
 
@@ -105,6 +107,12 @@
 		min-width: 320px;
 		border-collapse: collapse;
 		table-layout: fixed;
+	}
+
+	@keyframes appear {
+		from {
+			opacity: 0;
+		}
 	}
 
 	thead th {
@@ -184,6 +192,11 @@
 
 	.cell {
 		position: relative;
+		transition:
+			background-color 0.2s,
+			border-color 0.2s,
+			color 0.2s,
+			transform 0.12s;
 		display: inline-grid;
 		place-items: center;
 		width: 100%;
@@ -198,6 +211,20 @@
 		font-weight: 700;
 		font-style: normal;
 		line-height: 1;
+	}
+
+	.cell:active {
+		transform: scale(0.88);
+	}
+
+	.cell.pop {
+		animation: pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+	}
+
+	@keyframes pop {
+		from {
+			transform: scale(0.55);
+		}
 	}
 
 	.cell.done {
